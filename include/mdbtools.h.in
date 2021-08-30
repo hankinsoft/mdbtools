@@ -18,9 +18,6 @@
 #ifndef _mdbtools_h_
 #define _mdbtools_h_
 
-#define MDBTOOLS_H_HAVE_ICONV_H @HAVE_ICONV_H@
-#define MDBTOOLS_H_HAVE_XLOCALE_H @HAVE_XLOCALE_H@
-
 #ifdef __cplusplus
   extern "C" {
 #endif
@@ -34,15 +31,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <locale.h>
+#include <@ICONV_INCLUDE_HEADER@>
+#include <@XLOCALE_INCLUDE_HEADER@>
 #include <@GLIB_INCLUDE_HEADER@>
-
-#if MDBTOOLS_H_HAVE_ICONV_H
-#include <iconv.h>
-#endif
-
-#if MDBTOOLS_H_HAVE_XLOCALE_H
-#include <xlocale.h>
-#endif
 
 #ifdef _WIN32
 #include <io.h>
@@ -66,8 +57,6 @@
 // This attribute is not supported by all compilers:
 // M$VC see http://stackoverflow.com/questions/1113409/attribute-constructor-equivalent-in-vc
 #define MDB_DEPRECATED(type, funcname) type __attribute__((deprecated)) funcname
-
-typedef @LOCALE_T@ mdb_locale_t;
 
 enum {
 	MDB_PAGE_DB = 0,
@@ -133,7 +122,6 @@ enum {
 	MDB_ISNULL,
 	MDB_NOTNULL,
 	MDB_ILIKE,
-	MDB_NEQ,
 };
 
 typedef enum {
@@ -158,11 +146,6 @@ enum {
 	MDB_NO_MEMO = 0x0080, /* don't follow memo fields */
 };
 
-typedef enum {
-    MDB_BRACES_4_2_2_8, /* "{XXXX-XX-XX-XXXXXXXX}" format */
-    MDB_NOBRACES_4_2_2_2_6, /* "XXXX-XX-XX-XX-XXXXXX" format (matches MS Access ODBC driver) */
-} MdbUuidFormat;
-
 #define mdb_is_logical_op(x) (x == MDB_OR || \
 				x == MDB_AND || \
 				x == MDB_NOT )
@@ -172,7 +155,6 @@ typedef enum {
 				x == MDB_LT || \
 				x == MDB_GTEQ || \
 				x == MDB_LTEQ || \
-				x == MDB_NEQ || \
 				x == MDB_LIKE || \
 				x == MDB_ILIKE || \
 				x == MDB_ISNULL || \
@@ -305,7 +287,6 @@ typedef struct {
     size_t bind_size;
     char date_fmt[64];
     char shortdate_fmt[64];
-    MdbUuidFormat repid_fmt;
     const char *boolean_false_value;
     const char *boolean_true_value;
 	unsigned int  num_catalog;
@@ -318,11 +299,12 @@ typedef struct {
 	char        *relationships_values[5];
 	MdbStatistics *stats;
     GHashTable *backends;
-#if MDBTOOLS_H_HAVE_ICONV_H
-	iconv_t iconv_in;
-	iconv_t iconv_out;
+	@ICONV_TYPE@ iconv_in;
+	@ICONV_TYPE@ iconv_out;
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64) || defined(WINDOWS)
+    _locale_t locale;
 #else
-    mdb_locale_t locale;
+    locale_t locale;
 #endif
 } MdbHandle; 
 
@@ -536,8 +518,7 @@ int mdb_bind_column_by_name(MdbTableDef *table, gchar *col_name, void *bind_ptr,
 void mdb_data_dump(MdbTableDef *table);
 void mdb_date_to_tm(double td, struct tm *t);
 void mdb_tm_to_date(struct tm *t, double *td);
-char *mdb_uuid_to_string(const void *buf, int start); /* Uses default MDB_BRACES_4_2_2_8 format */
-char *mdb_uuid_to_string_fmt(const void *buf, int start, MdbUuidFormat format);
+char *mdb_uuid_to_string(const void *buf, int start);
 int mdb_bind_column(MdbTableDef *table, int col_num, void *bind_ptr, int *len_ptr);
 int mdb_rewind_table(MdbTableDef *table);
 int mdb_fetch_row(MdbTableDef *table);
@@ -554,7 +535,6 @@ void* mdb_ole_read_full(MdbHandle *mdb, MdbColumn *col, size_t *size);
 void mdb_set_bind_size(MdbHandle *mdb, size_t bind_size);
 void mdb_set_date_fmt(MdbHandle *mdb, const char *);
 void mdb_set_shortdate_fmt(MdbHandle *mdb, const char *);
-void mdb_set_repid_fmt(MdbHandle *mdb, MdbUuidFormat format);
 void mdb_set_boolean_fmt_words(MdbHandle *mdb);
 void mdb_set_boolean_fmt_numbers(MdbHandle *mdb);
 int mdb_read_row(MdbTableDef *table, unsigned int row);

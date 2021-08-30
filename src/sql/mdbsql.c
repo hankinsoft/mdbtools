@@ -17,6 +17,9 @@
  */
 
 #include <stdarg.h>
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
 #include "mdbsql.h"
 
 #ifdef HAVE_STRPTIME
@@ -399,7 +402,6 @@ mdb_sql_eval_expr(MdbSQL *sql, char *const1, int op, char *const2)
 			case MDB_LTEQ: compar = (value <= 0); break;
 			case MDB_LIKE: compar = mdb_like_cmp(const1,const2); break;
 			case MDB_ILIKE: compar = mdb_ilike_cmp(const1,const2); break;
-			case MDB_NEQ: compar = (value ? 1 : 0); break;
 			default: illop = 1;
 		}
 	} else if (const1[0]!='\'' && const2[0]!='\'') {
@@ -411,7 +413,6 @@ mdb_sql_eval_expr(MdbSQL *sql, char *const1, int op, char *const2)
 			case MDB_GTEQ: compar = (val1 >= val2); break;
 			case MDB_LT: compar = (val1 < val2); break;
 			case MDB_LTEQ: compar = (val1 <= val2); break;
-			case MDB_NEQ: compar = (val1 != val2); break;
 			default: illop = 1;
 		}
 	} else {

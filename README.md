@@ -74,7 +74,7 @@ First, you must have reasonably current installations of:
 
 * [libtool](https://www.gnu.org/software/libtool/)
 * [automake](https://www.gnu.org/software/automake/)
-* [autoconf](https://www.gnu.org/software/autoconf/) (version >= 2.64)
+* [autoconf](https://www.gnu.org/software/autoconf/) (version >= 2.58)
 
 If you want to build the SQL engine, you'll need
 [bison](https://www.gnu.org/software/bison/) (version >= 3.0) or
@@ -148,9 +148,6 @@ mutually exclusive.
 --with-iodbc     specifies the location of the iODBC driver manager and 
                  causes the iODBC driver to be built.
 ```
-
-By default, the ODBC driver will be installed as /usr/local/lib/odbc/libmdbodbc.so,
-with a Unicode-capable driver at /usr/local/lib/odbc/libmdbodbcW.so.
 
 A list of general options is available in the [INSTALL](./INSTALL) file, and
 `configure --help` will give you the list of mdbtools specific options.

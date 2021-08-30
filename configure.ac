@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([mdbtools],[1.0.0-beta4],[https://github.com/mdbtools/mdbtools/issues],[],[https://github.com/mdbtools/mdbtools])
+AC_INIT([mdbtools],[1.0.0-beta2],[https://github.com/mdbtools/mdbtools/issues],[],[https://github.com/mdbtools/mdbtools])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR(src/extras/mdb-dump.c)
@@ -11,13 +11,12 @@ MDBTOOLS_VERSION_MICRO=0
 
 # Update these numbers with every release
 # See https://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
-VERSION_INFO=4:0:1
+VERSION_INFO=4:0:0
 AC_SUBST(VERSION_INFO)
+AC_SUBST(MDBTOOLS_CFLAGS)
 
 AM_MAINTAINER_MODE([enable])
 AM_SILENT_RULES([yes])
-
-AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CC(gcc)
 AC_PROG_CXX
@@ -26,7 +25,7 @@ dnl Checks for programs.
 AC_PROG_MAKE_SET
 m4_pattern_allow([AM_PROG_AR], [AM_PROG_AR])
 LT_INIT([win32-dll])
-AC_PROG_LEX([noyywrap])
+AC_PROG_LEX
 AC_PROG_YACC
 
 dnl Checks for header files.
@@ -38,8 +37,13 @@ AC_CHECK_DECLS([program_invocation_short_name], [], [], [[
 
 dnl Checks for library functions.
 VL_LIB_READLINE
-AC_CHECK_FUNCS(strptime fmemopen gmtime_r reallocf wcstombs_l mbstowcs_l vasprintf vasnprintf)
+AC_CHECK_FUNCS(strptime fmemopen gmtime_r reallocf wcstombs_l vasprintf vasnprintf)
 
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_SIZE_T
+
+AM_ICONV
 AM_GCC_ATTRIBUTE_ALIAS
 
 dnl Enable large files on 32-bit systems
@@ -84,30 +88,12 @@ AC_SUBST(SQL)
 AC_SUBST(LFLAGS)
 
 CFLAGS="$CFLAGS -Wall -Werror"
-LOCALE_T=locale_t
 AS_CASE([$host],
-        [*mingw*|*cygwin*], [LDFLAGS="$LDFLAGS -no-undefined" LOCALE_T=_locale_t], [])
-AC_SUBST(LOCALE_T)
-
-dnl See if iconv is present and wanted
-AC_ARG_ENABLE(iconv,
-    AS_HELP_STRING([--disable-iconv], [do not use iconv for character conversions (use locale.h where possible)]),
-        [enable_iconv=$enableval], [enable_iconv=yes])
-
-HAVE_ICONV_H=0
-if test "$enable_iconv" = "yes"; then
-    AM_ICONV
-    # Use the "working iconv" test instead of the "iconv" ($am_cv_func_iconv) test
-    # so that our HAVE_ICONV_H substitution variable has the same value as the HAVE_ICONV
-    # C macro
-    if test "$am_func_iconv" = "yes"; then
-        HAVE_ICONV_H=1
-    fi
-fi
-AC_SUBST(HAVE_ICONV_H)
+        [*mingw*|*cygwin*], [LDFLAGS="$LDFLAGS -no-undefined"], [])
 
 dnl Fuzz testing
-AC_ARG_ENABLE([fuzz-testing], AS_HELP_STRING([--enable-fuzz-testing], [enable fuzz testing (requires Clang 6 or later)]), [
+
+AC_ARG_ENABLE([fuzz-testing], AS_HELP_STRING([--enable-fuzz-testing], ["Enable fuzz testing (requires Clang 6 or later)"]), [
    AC_MSG_CHECKING([whether $CC accepts -fsanitize=fuzzer])
    tmp_saved_flags=$[]_AC_LANG_PREFIX[]FLAGS
    _AC_LANG_PREFIX[]FLAGS="$[]_AC_LANG_PREFIX[]FLAGS -fsanitize=fuzzer"
@@ -204,6 +190,9 @@ if test "x$HAVE_ODBC" = "xtrue"; then
 	OPTDIRS="$OPTDIRS odbc"
 fi
 
+dnl Conditionally build odbc wide version
+AM_CONDITIONAL(ICONV, test "$am_cv_func_iconv" = "yes")
+
 dnl Testing presence of pkg-config
 AC_MSG_CHECKING([pkg-config m4 macros])
 if test m4_ifdef([PKG_CHECK_MODULES], [yes], [no]) = yes; then
@@ -234,12 +223,22 @@ fi
 AM_CONDITIONAL(FAKE_GLIB, test "x$enable_glib" != "xyes")
 
 dnl Set up substitution variables
-if test "$ac_cv_header_xlocale_h" = "yes"; then
-    HAVE_XLOCALE_H=1
+if test "$am_cv_func_iconv" = "yes"; then
+    ICONV_INCLUDE_HEADER=iconv.h
+    ICONV_TYPE=iconv_t
 else
-    HAVE_XLOCALE_H=0
+    ICONV_INCLUDE_HEADER=stdbool.h
+    ICONV_TYPE=[void *]
 fi
-AC_SUBST(HAVE_XLOCALE_H)
+AC_SUBST(ICONV_INCLUDE_HEADER)
+AC_SUBST(ICONV_TYPE)
+
+if test "$ac_cv_header_xlocale_h" = "yes"; then
+    XLOCALE_INCLUDE_HEADER=xlocale.h
+else
+    XLOCALE_INCLUDE_HEADER=stdbool.h
+fi
+AC_SUBST(XLOCALE_INCLUDE_HEADER)
 
 if test "$enable_glib" = "yes"; then
     GLIB_INCLUDE_HEADER=glib.h
@@ -320,8 +319,6 @@ if test x$HAVE_ODBC = xtrue; then summary=${bold_green}enabled; else summary=${b
 AC_MSG_NOTICE([   ODBC            : ${summary}${reset}])
 if test x$enable_glib = xyes; then summary=${bold_green}enabled; else summary=${bold_red}disabled; fi
 AC_MSG_NOTICE([   GLib            : ${summary}${reset}])
-if test x$enable_iconv = xyes; then summary=${bold_green}enabled; else summary=${bold_red}disabled; fi
-AC_MSG_NOTICE([   iconv           : ${summary}${reset}])
 if test x$enable_man = xyes; then summary=${bold_green}enabled; else summary=${bold_red}disabled; fi
 AC_MSG_NOTICE([   man pages       : ${summary}${reset}])
 if test "x$with_bash_completion_dir" != "xno"; then summary=${bold_green}enabled; else summary=${bold_red}disabled; fi

@@ -50,7 +50,10 @@ struct _hdbc {
 	GPtrArray *statements;
     char lastError[256];
     char sqlState[6];
-    mdb_locale_t locale;
+#ifdef ENABLE_ODBC_W
+    iconv_t iconv_in;
+    iconv_t iconv_out;
+#endif
 };
 struct _hstmt {
 	MdbSQL *sql;

@@ -67,9 +67,6 @@ int rc;
 		case MDB_LTEQ:
 			if (rc>=0) return 1;
 			break;
-		case MDB_NEQ:
-			if (rc!=0) return 1;
-			break;
 		default:
 			fprintf(stderr, "Calling mdb_test_sarg on unknown operator.  Add code to mdb_test_string() for operator %d\n",node->op);
 			break;
@@ -78,26 +75,22 @@ int rc;
 }
 int mdb_test_int(MdbSargNode *node, gint32 i)
 {
-	gint32 val = node->val_type == MDB_INT ? node->value.i : node->value.d;
 	switch (node->op) {
 		case MDB_EQUAL:
 			//fprintf(stderr, "comparing %ld and %ld\n", i, node->value.i);
-			if (val == i) return 1;
+			if (node->value.i == i) return 1;
 			break;
 		case MDB_GT:
-			if (val < i) return 1;
+			if (node->value.i < i) return 1;
 			break;
 		case MDB_LT:
-			if (val > i) return 1;
+			if (node->value.i > i) return 1;
 			break;
 		case MDB_GTEQ:
-			if (val <= i) return 1;
+			if (node->value.i <= i) return 1;
 			break;
 		case MDB_LTEQ:
-			if (val >= i) return 1;
-			break;
-		case MDB_NEQ:
-			if (val != i) return 1;
+			if (node->value.i >= i) return 1;
 			break;
 		default:
 			fprintf(stderr, "Calling mdb_test_sarg on unknown operator.  Add code to mdb_test_int() for operator %d\n",node->op);
@@ -135,9 +128,6 @@ int mdb_test_double(int op, double vd, double d)
 			break;
 		case MDB_LTEQ:
 			ret = (vd >= d);
-			break;
-		case MDB_NEQ:
-			ret = (vd != d);
 			break;
 		default:
 			fprintf(stderr, "Calling mdb_test_sarg on unknown operator.  Add code to mdb_test_double() for operator %d\n",op);
@@ -245,17 +235,16 @@ mdb_test_sarg(MdbHandle *mdb, MdbColumn *col, MdbSargNode *node, MdbField *field
 			ret = mdb_test_int(node, (gint32)mdb_get_int32(field->value, 0));
 			break;
 		case MDB_FLOAT:
-			ret = mdb_test_double(node->op, node->val_type == MDB_INT ? node->value.i : node->value.d, mdb_get_single(field->value, 0));
+			ret = mdb_test_double(node->op, node->value.d, mdb_get_single(field->value, 0));
 			break;
 		case MDB_DOUBLE:
-			ret = mdb_test_double(node->op, node->val_type == MDB_INT ? node->value.i : node->value.d, mdb_get_double(field->value, 0));
+			ret = mdb_test_double(node->op, node->value.d, mdb_get_double(field->value, 0));
 			break;
 		case MDB_TEXT:
 			mdb_unicode2ascii(mdb, field->value, field->siz, tmpbuf, sizeof(tmpbuf));
 			ret = mdb_test_string(node, tmpbuf);
 			break;
 		case MDB_MEMO:
-		case MDB_REPID:
 			val = mdb_col_to_string(mdb, mdb->pg_buf, field->start, col->col_type, (gint32)mdb_get_int32(field->value, 0));
 			//printf("%s\n",val);
 			ret = mdb_test_string(node, val);

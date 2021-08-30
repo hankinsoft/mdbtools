@@ -12,4 +12,5 @@ Description: libmdb based SQL engine
 Requires: libmdb
 Version: @VERSION@
 Libs: -L${libdir} -lmdbsql
-Cflags: -I${includedir}
+Cflags:
+
